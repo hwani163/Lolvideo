@@ -1,0 +1,5 @@
+{
+
+  "insertVideo":"INSERT INTO Video(champ_name,video_url,title,sub_title,create_date,status,user_id,thumbnail) VALUES(?,?,?,?,now(),'N','admin',?)"
+  ,"selectVideoList" :"select * from Video where champ_name like ? order by create_date desc" 
+}
