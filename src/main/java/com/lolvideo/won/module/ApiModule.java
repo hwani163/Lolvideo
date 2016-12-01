@@ -34,6 +34,7 @@ package com.lolvideo.won.module;
  * @author Jeremy Walker
  */
 public class ApiModule {
+    String url = "ddd";
 /*
     *//** Global instance of the HTTP transport. *//*
     private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
