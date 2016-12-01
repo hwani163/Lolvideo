@@ -35,6 +35,7 @@ package com.lolvideo.won.module;
  */
 public class ApiModule {
     String url = "ddd";
+    String kk = "ddddd";
 /*
     *//** Global instance of the HTTP transport. *//*
     private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
