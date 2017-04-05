@@ -1,194 +1,190 @@
+/*
+ * Copyright (c) 2012 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
+ */
+
 package com.lolvideo.won.module;
-/*package com.google.api.services.samples.youtube.cmdline.youtube_cmdline_myuploads_sample;
 
-        import java.io.File;
-        import java.util.ArrayList;
-        import java.util.Iterator;
-        import java.util.List;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Properties;
 
-        import com.google.api.client.auth.oauth2.Credential;
-        import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
-        import com.google.api.client.extensions.java6.auth.oauth2.FileCredentialStore;
-        import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
-        import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
-        import com.google.api.client.googleapis.auth.oauth2.GoogleClientSecrets;
-        import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-        import com.google.api.client.http.HttpTransport;
-        import com.google.api.client.http.javanet.NetHttpTransport;
-        import com.google.api.client.json.JsonFactory;
-        import com.google.api.client.json.jackson2.JacksonFactory;
-        import com.google.api.services.youtube.YouTube;
-        import com.google.api.services.youtube.model.Channel;
-        import com.google.api.services.youtube.model.ChannelListResponse;
-        import com.google.api.services.youtube.model.PlaylistItem;
-        import com.google.api.services.youtube.model.PlaylistItemListResponse;
-        import com.google.common.collect.Lists;*/
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.http.HttpRequest;
+import com.google.api.client.http.HttpRequestInitializer;
+import com.google.api.client.http.HttpTransport;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.services.youtube.YouTube;
+import com.google.api.services.youtube.model.ResourceId;
+import com.google.api.services.youtube.model.SearchListResponse;
+import com.google.api.services.youtube.model.SearchResult;
+import com.google.api.services.youtube.model.Thumbnail;
 
 /**
- * Prints a list of videos uploaded to the user's YouTube account using OAuth2 for authentication.
- *
- *  Details: The app uses Youtube.Channnels.List to get the playlist id associated with all the
- * videos ever uploaded to the user's account. It then gets all the video info using
- * YouTube.PlaylistItems.List. Finally, it prints all the information to the screen.
+ * Prints a list of videos based on a search term.
  *
  * @author Jeremy Walker
  */
 public class ApiModule {
-    String url = "ddd";
-    String kk = "ddddd";
-/*
-    *//** Global instance of the HTTP transport. *//*
-    private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
 
-    *//** Global instance of the JSON factory. *//*
-    private static final JsonFactory JSON_FACTORY = new JacksonFactory();
+	/** Global instance properties filename. */
+	private static String PROPERTIES_FILENAME = "youtube.properties";
 
-    *//** Global instance of YouTube object to make all API requests. *//*
-    private static YouTube youtube;
+	/** Global instance of the HTTP transport. */
+	private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
 
-    *//**
-     * Authorizes the installed application to access user's protected data.
-     *
-     * @param scopes list of scopes needed to run upload.
-     *//*
-    private static Credential authorize(List<String> scopes) throws Exception {
+	/** Global instance of the JSON factory. */
+	private static final JsonFactory JSON_FACTORY = new JacksonFactory();
 
-        // Load client secrets.
-        GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(
-                JSON_FACTORY, MyUploads.class.getResourceAsStream("/client_secrets.json"));
+	/**
+	 * Global instance of the max number of videos we want returned (50 = upper
+	 * limit per page).
+	 */
+	private static final long NUMBER_OF_VIDEOS_RETURNED = 25;
 
-        // Checks that the defaults have been replaced (Default = "Enter X here").
-        if (clientSecrets.getDetails().getClientId().startsWith("Enter")
-                || clientSecrets.getDetails().getClientSecret().startsWith("Enter ")) {
-            System.out.println(
-                    "Enter Client ID and Secret from https://code.google.com/apis/console/?api=youtube"
-                            + "into youtube-cmdline-myuploads-sample/src/main/resources/client_secrets.json");
-            System.exit(1);
-        }
+	/** Global instance of Youtube object to make all API requests. */
+	private static YouTube youtube;
 
-        // Set up file credential store.
-        FileCredentialStore credentialStore = new FileCredentialStore(
-                new File(System.getProperty("user.home"), ".credentials/youtube-api-myuploads.json"),
-                JSON_FACTORY);
+	/**
+	 * Initializes YouTube object to search for videos on YouTube
+	 * (Youtube.Search.List). The program then prints the names and thumbnails
+	 * of each of the videos (only first 50 videos).
+	 *
+	 * @param args
+	 *            command line args.
+	 * @return
+	 */
+	public ArrayList<ArrayList<String>> run(String keywords) {
+		// Read the developer key from youtube.properties
+		Properties properties = new Properties();
 
-        // Set up authorization code flow.
-        GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
-                HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, scopes).setCredentialStore(credentialStore)
-                .build();
+		String path = ApiModule.class.getResource("").getPath() + "/" + PROPERTIES_FILENAME;
 
-        // Build the local server and bind it to port 9000
-        LocalServerReceiver localReceiver = new LocalServerReceiver.Builder().setPort(8080).build();
+		try {
 
-        // Authorize.
-        return new AuthorizationCodeInstalledApp(flow, localReceiver).authorize("user");
-    }
+			InputStream in = new FileInputStream(path);
+			properties.load(in);
 
-    *//**
-     * Authorizes user, runs Youtube.Channnels.List get the playlist id associated with uploaded
-     * videos, runs YouTube.PlaylistItems.List to get information on each video, and prints out the
-     * results.
-     *
-     * @param args command line args (not used).
-     *//*
-    public static void main(String[] args) {
+		} catch (IOException e) {
+			System.err.println(
+					"There was an error reading " + PROPERTIES_FILENAME + ": " + e.getCause() + " : " + e.getMessage());
+			System.exit(1);
+		}
 
-        // Scope required to upload to YouTube.
-        List<String> scopes = Lists.newArrayList("https://www.googleapis.com/auth/youtube");
+		try {
+			/*
+			 * The YouTube object is used to make all API requests. The last
+			 * argument is required, but because we don't need anything
+			 * initialized when the HttpRequest is initialized, we override the
+			 * interface and provide a no-op function.
+			 */
+			youtube = new YouTube.Builder(HTTP_TRANSPORT, JSON_FACTORY, new HttpRequestInitializer() {
+				public void initialize(HttpRequest request) throws IOException {
+				}
+			}).setApplicationName("youtube-cmdline-search-sample").build();
 
-        try {
-            // Authorization.
-            Credential credential = authorize(scopes);
+			// Get query term from user.
+			String queryTerm = keywords;
 
-            // YouTube object used to make all API requests.
-            youtube = new YouTube.Builder(HTTP_TRANSPORT, JSON_FACTORY, credential).setApplicationName(
-                    "youtube-cmdline-myuploads-sample").build();
+			YouTube.Search.List search = youtube.search().list("id,snippet");
+			/*
+			 * It is important to set your developer key from the Google
+			 * Developer Console for non-authenticated requests (found under the
+			 * API Access tab at this link: code.google.com/apis/). This is good
+			 * practice and increased your quota.
+			 */
+			String apiKey = properties.getProperty("youtube.apikey");
+			search.setKey(apiKey);
+			search.setQ(queryTerm);
+			/*
+			 * We are only searching for videos (not playlists or channels). If
+			 * we were searching for more, we would add them as a string like
+			 * this: "video,playlist,channel".
+			 */
+			search.setType("video");
+			/*
+			 * This method reduces the info returned to only the fields we need
+			 * and makes calls more efficient.
+			 */
 
-      *//*
-       * Now that the user is authenticated, the app makes a channel list request to get the
-       * authenticated user's channel. Returned with that data is the playlist id for the uploaded
-       * videos. https://developers.google.com/youtube/v3/docs/channels/list
-       *//*
-            YouTube.Channels.List channelRequest = youtube.channels().list("contentDetails");
-            channelRequest.setMine("true");
-      *//*
-       * Limits the results to only the data we needo which makes things more efficient.
-       *//*
-            channelRequest.setFields("items/contentDetails,nextPageToken,pageInfo");
-            ChannelListResponse channelResult = channelRequest.execute();
+			search.setFields("items(id,snippet(channelTitle,thumbnails,title)),nextPageToken,pageInfo,prevPageToken");
+			search.setOrder("date");
+			search.setVideoLicense("creativeCommon");
+			search.setMaxResults(NUMBER_OF_VIDEOS_RETURNED);
 
-      *//*
-       * Gets the list of channels associated with the user. This sample only pulls the uploaded
-       * videos for the first channel (default channel for user).
-       *//*
-            List<Channel> channelsList = channelResult.getItems();
+			SearchListResponse searchResponse = search.execute();
 
-            if (channelsList != null) {
-                // Gets user's default channel id (first channel in list).
-                String uploadPlaylistId =
-                        channelsList.get(0).getContentDetails().getRelatedPlaylists().getUploads();
+			List<SearchResult> searchResultList = searchResponse.getItems();
 
-                // List to store all PlaylistItem items associated with the uploadPlaylistId.
-                List<PlaylistItem> playlistItemList = new ArrayList<PlaylistItem>();
+			if (searchResultList != null) {
+				return prettyPrint(searchResultList.iterator(), queryTerm, keywords);
+			}
+		} catch (GoogleJsonResponseException e) {
+			System.err.println(
+					"There was a service error: " + e.getDetails().getCode() + " : " + e.getDetails().getMessage());
+		} catch (IOException e) {
+			System.err.println("There was an IO error: " + e.getCause() + " : " + e.getMessage());
+		} catch (Throwable t) {
+			t.printStackTrace();
+		}
+		return null;
+	}
 
-        *//*
-         * Now that we have the playlist id for your uploads, we will request the playlistItems
-         * associated with that playlist id, so we can get information on each video uploaded. This
-         * is the template for the list call. We call it multiple times in the do while loop below
-         * (only changing the nextToken to get all the videos).
-         * https://developers.google.com/youtube/v3/docs/playlistitems/list
-         *//*
-                YouTube.PlaylistItems.List playlistItemRequest =
-                        youtube.playlistItems().list("id,contentDetails,snippet");
-                playlistItemRequest.setPlaylistId(uploadPlaylistId);
+	/*
+	 * Prints out all SearchResults in the Iterator. Each printed line includes
+	 * title, id, and thumbnail.
+	 *
+	 * @param iteratorSearchResults Iterator of SearchResults to print
+	 *
+	 * @param query Search query (String)
+	 */
+	private static ArrayList<ArrayList<String>> prettyPrint(Iterator<SearchResult> iteratorSearchResults, String query,
+			String champName) {
 
-                // This limits the results to only the data we need and makes things more efficient.
-                playlistItemRequest.setFields(
-                        "items(contentDetails/videoId,snippet/title,snippet/publishedAt),nextPageToken,pageInfo");
+		System.out.println("\n=============================================================");
+		System.out.println("   First " + NUMBER_OF_VIDEOS_RETURNED + " videos for search on \"" + query + "\".");
+		System.out.println("=============================================================\n");
 
-                String nextToken = "";
+		if (!iteratorSearchResults.hasNext()) {
+			System.out.println(" There aren't any results for your query.");
+		}
 
-                // Loops over all search page results returned for the uploadPlaylistId.
-                do {
-                    playlistItemRequest.setPageToken(nextToken);
-                    PlaylistItemListResponse playlistItemResult = playlistItemRequest.execute();
+		ArrayList<ArrayList<String>> returnlist = new ArrayList<ArrayList<String>>();
+		while (iteratorSearchResults.hasNext()) {
+			ArrayList<String> vo = new ArrayList<String>();
+			SearchResult singleVideo = iteratorSearchResults.next();
+			ResourceId rId = singleVideo.getId();
 
-                    playlistItemList.addAll(playlistItemResult.getItems());
 
-                    nextToken = playlistItemResult.getNextPageToken();
-                } while (nextToken != null);
+			if (rId.getKind().equals("youtube#video")) {
+				Thumbnail thumbnail = singleVideo.getSnippet().getThumbnails().get("default");
 
-                // Prints results.
-                prettyPrint(playlistItemList.size(), playlistItemList.iterator());
-            }
+				vo.add(champName);
+				vo.add(rId.getVideoId());
+				vo.add(singleVideo.getSnippet().getTitle());
+				vo.add(champName);
+				vo.add(thumbnail.getUrl());
 
-        } catch (GoogleJsonResponseException e) {
-            e.printStackTrace();
-            System.err.println("There was a service error: " + e.getDetails().getCode() + " : "
-                    + e.getDetails().getMessage());
-
-        } catch (Throwable t) {
-            t.printStackTrace();
-        }
-    }
-
-    *//*
-     * Method that prints all the PlaylistItems in an Iterator.
-     *
-     * @param size size of list
-     *
-     * @param iterator of Playlist Items from uploaded Playlist
-     *//*
-    private static void prettyPrint(int size, Iterator<PlaylistItem> playlistEntries) {
-        System.out.println("=============================================================");
-        System.out.println("\t\tTotal Videos Uploaded: " + size);
-        System.out.println("=============================================================\n");
-
-        while (playlistEntries.hasNext()) {
-            PlaylistItem playlistItem = playlistEntries.next();
-            System.out.println(" video name  = " + playlistItem.getSnippet().getTitle());
-            System.out.println(" video id    = " + playlistItem.getContentDetails().getVideoId());
-            System.out.println(" upload date = " + playlistItem.getSnippet().getPublishedAt());
-            System.out.println("\n-------------------------------------------------------------\n");
-        }
-    }*/
+			}
+			returnlist.add(vo);
+		}
+		return returnlist;
+		// String championName, String youtubeUrl, String title, String
+		// subtitle, String thumbnail
+	}
 }

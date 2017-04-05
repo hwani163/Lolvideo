@@ -66,6 +66,7 @@ public class VideoDao
   public int insertVideo(String championName, String youtubeUrl, String title, String subtitle, String thumbnail)
   {
     String sql = new SqlLoder().getSql("insertVideo");
+   System.out.println(sql);
     int result = 0;
     try
     {
